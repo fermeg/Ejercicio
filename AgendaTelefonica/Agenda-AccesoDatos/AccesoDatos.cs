@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+//
+//Hacemos las importaciones del espacio de nombres de los dos proyectos que referenciamos
 using Agenda_Entidades;
 
 namespace Agenda_AccesoDatos
@@ -21,16 +23,16 @@ namespace Agenda_AccesoDatos
 
         
         // Método que carga el fichero en memoria
-        public void CargaFichero()
+        public bool CargaFichero(string filePath)
         {
-            
+
             try
             {   // Abre el fichero de texto usando un strean reader
-                using (StreamReader sr = new StreamReader(@"C:\temp\AgendaTelefonica.txt"))
+                using (StreamReader sr = new StreamReader(filePath))
                 {
                     // Lee una línea y la almacena
                     linea = sr.ReadLine();
-                    
+
                     // Mientras no llegemos al final del fichero de texto
                     while (linea != null)
                     {
@@ -41,43 +43,42 @@ namespace Agenda_AccesoDatos
                         // Se le pasa el Nombre+Apellido. Devuelve una matriz con los datos separados: Nombre,Apellido
                         string[] NombreApellidoSeparados = RecortarCadena(datosContacto[0], ' ');
 
-                       
                         //Guardo la linea del fichero de texto en un contacto
                         Contacto contacto = new Contacto
                         {
-                            // Asigna al contacto los datos de la linea recién leída.
-                            Nombre = NombreApellidoSeparados[0].ToString(),
-                            Apellido = NombreApellidoSeparados[1].ToString(),
-                            Ciudad = datosContacto[1].ToString(),
-                            Telefono = datosContacto[2].ToString()
+                                // Asigna al contacto los datos de la linea recién leída.
+                                Nombre = NombreApellidoSeparados[0].ToString(),
+                                Apellido = NombreApellidoSeparados[1].ToString(),
+                                Ciudad = datosContacto[1].ToString(),
+                                Telefono = datosContacto[2].ToString()
                         };
 
                         // Añade el contacto a la lista.
                         contactos.Add(contacto);
-
+                        
                         // Lee la linea siguiente.
                         linea = sr.ReadLine();
-                    }                    
+                    }
                 }
             }
-            catch (IOException e)
+            catch (IndexOutOfRangeException)
             {
-                throw e;
-                
+                throw new System.IndexOutOfRangeException("El fichero seleccionado no tiene el formato adecuado");
             }
-         }
+
+            return true;
+        }
 
         // Método que busca un texto en el nombre, apellido o ciudad, y devuelve una lista con todos los contactos en los que hay alguna coincidencia.
         public List<Contacto> Listar(string texto)
         {
           
             // Quito los espacios en blanco que pueda haber al principio y al final, y lo paso a mayúsculas para poder hacer las comparaciones
-            texto = texto.Trim().ToUpperInvariant();
+            texto = texto.Trim().ToUpper();
             
             // Utilizo LinQ para seleccionar los contactos que cumplan las condiciones
-            _contactos = contactos.Where(c => (!string.IsNullOrEmpty(texto))
-                                        && (c.Nombre.Trim().ToUpperInvariant().Contains(texto) || c.Apellido.Trim().ToUpperInvariant().Contains(texto) 
-                                            || c.Ciudad.Trim().ToUpperInvariant().Contains(texto))
+            _contactos = contactos.Where(c => (c.Nombre.Trim().ToUpper().Contains(texto) || c.Apellido.Trim().ToUpper().Contains(texto) 
+                                            || c.Ciudad.Trim().ToUpper().Contains(texto))
                                         ).ToList();
             
 
@@ -90,38 +91,25 @@ namespace Agenda_AccesoDatos
         public List<Contacto> Buscar(string texto, string ciudad)
         {
             // Quito los espacios en blanco que pueda haber al principio y al final, y lo paso a mayúsculas para poder hacer las comparaciones
-            texto = texto.Trim().ToUpperInvariant();
-            ciudad = ciudad.Trim().ToUpperInvariant();
+            texto = texto.Trim().ToUpper();
+            ciudad = ciudad.Trim().ToUpper();
 
-            // Utilizo el método IsNullOrEmpty para comprobar que los parámetros no sean nulos o estén vacios.
-            // Utilizo el método Contains que busca una subcadena (texto; ciudad) en una cadena (Nombre;Apellido;Ciudad)
-            _contactos = contactos.Where(c => (!string.IsNullOrEmpty(texto) && !string.IsNullOrEmpty(ciudad))
-                                        && (c.Nombre.Trim().ToUpperInvariant().Contains(texto) || c.Apellido.Trim().ToUpperInvariant().Contains(texto))
-                                        && (c.Ciudad.Trim().ToUpperInvariant().Contains(ciudad))
+            // Utilizo el método StartsWith que busca una subcadena (texto; ciudad) que coincida con el comienzo en una cadena (Nombre;Apellido;Ciudad)
+            _contactos = contactos.Where(c =>((c.Nombre.Trim().ToUpper().StartsWith(texto) || c.Apellido.Trim().ToUpper().StartsWith(texto))
+                                        && (c.Ciudad.Trim().ToUpper().StartsWith(ciudad)))
                                         ).ToList();
 
             return _contactos;
 
         }
 
-        // El método ListarContactosFiltrados nos devolverá la lista de los contactos que cumplan las condiciones
-        public List<Contacto> ListarContactosFiltrados(FiltroContactos filtroContactos)
+        // El método ListarContactosFiltrados nos devolverá la lista de los contactos que cumplan las condiciones.
+        // Hace uso del método específico "Equals" para el tipo "Contacto".
+        public List<Contacto> ListarContactosFiltrados(Contacto contacto)
         {
-            // Quito los espacios en blanco que pueda haber al principio y al final, y lo paso a mayúsculas para poder hacer las comparaciones
-            string _nombre = filtroContactos.Nombre.Trim().ToUpperInvariant();
-            string _apellido = filtroContactos.Apellido.Trim().ToUpperInvariant();
-            string _ciudad = filtroContactos.Ciudad.Trim().ToUpperInvariant();
+            _contactos = contactos.Where(c => c.Equals(contacto)).ToList();
 
-            // Utilizo el método IsNullOrEmpty para comprobar que los parámetros no sean nulos o estén vacios.
-            // Utilizo el método StartsWith que comprueba si el Nombre, Apellido y Ciudad comienzan por los parametros introducidos.
-            _contactos = contactos.Where(c => (!string.IsNullOrEmpty(_nombre) || !string.IsNullOrEmpty(_apellido) || !string.IsNullOrEmpty(_ciudad))
-                                        && (c.Nombre.Trim().ToUpperInvariant().StartsWith(_nombre) && c.Apellido.Trim().ToUpperInvariant().StartsWith(_apellido)
-                                            && c.Ciudad.Trim().ToUpperInvariant().StartsWith(_ciudad))
-                                        )
-                                        .ToList();
-
-
-           return _contactos;
+            return _contactos;
 
         }
 
